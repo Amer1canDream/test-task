@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+        - name: app
+          securityContext: {}
+          image: "application-image"
+          command: ["/bin/bash"]
+          args: ["runapp"]
+          imagePullPolicy: Always
+          startupProbe:
+            httpGet:
+              path: /
+              port: app
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readniness
+              port: app
+            initialDelaySeconds: 10
+            timeoutSeconds: 4
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: app
+            failureThreshold: 1
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: 130MB
+            limits:
+              cpu: "1"
+              memory: 130MB
+------
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-hpa
+  namespace: app
+spec:
+  maxReplicas: 5
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app
+  targetCPUUtilizationPercentage: 20
